@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hausaufgaben und Admin App</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background-color: #1E1E1E;
+      padding: 30px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      box-shadow: 0 0 25px rgba(0, 0, 0, 0.5);
+      text-align: center;
+      display: none;
+    }
+
+    .visible {
+      display: block;
+    }
+
+    h1 {
+      color: #00C896;
+      font-size: 32px;
+      margin-bottom: 20px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 15px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      background-color: #333;
+      color: #ffffff;
+      font-size: 16px;
+      outline: none;
+    }
+
+    button {
+      background-color: #00C896;
+      color: white;
+      border: none;
+      padding: 15px;
+      width: 100%;
+      cursor: pointer;
+      border-radius: 8px;
+      margin-top: 10px;
+      font-size: 18px;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #00A57C;
+    }
+
+    .locked-message {
+      font-size: 24px;
+      color: #e94f37;
+    }
+
+    .black-screen {
+      background-color: #000000;
+      padding: 40px;
+      border-radius: 20px;
+      text-align: center;
+      color: #fff;
+      width: 90%;
+      max-width: 600px;
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.5);
+    }
+
+    .countdown {
+      font-size: 40px;
+      color: #fff;
+      margin-top: 20px;
+    }
+
+    .unlock-btn {
+      background-color: #e94f37;
+    }
+
+    .unlock-btn:hover {
+      background-color: #c93c2e;
+    }
+
+    .lock-link {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #fff;
+      color: #0072ff;
+      text-decoration: none;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+
+    .lock-link:hover {
+      background-color: #00c6ff;
+      color: #fff;
+    }
+
+    .blinking-dot {
+      height: 10px;
+      width: 10px;
+      background-color: #e94f37;
+      border-radius: 50%;
+      display: inline-block;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
+    }
+
+    .admin-app {
+      display: none;
+    }
+
+    .red-alert {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sperrbildschirm -->
+  <div class="container black-screen" id="locked-screen">
+    <h1>App Gesperrt</h1>
+    <p id="lock-message">Wartungsarbeiten...</p>
+    <a href="#" id="lock-link" class="lock-link">Mehr Informationen</a>
+    <div id="countdown" class="countdown"></div>
+    <button onclick="toggleLoginSection()">Admin-Anmeldung</button>
+    <div class="blinking-dot"></div>
+  </div>
+
+  <!-- Hausaufgaben App -->
+  <div class="container visible" id="homework-app">
+    <h1>Hausaufgaben-Manager</h1>
+
+    <!-- Neue Hausaufgabe hinzufügen -->
+    <input type="text" id="hausaufgabe" placeholder="Neue Hausaufgabe">
+    <input type="date" id="due-date">
+    <textarea id="details" placeholder="Details zur Hausaufgabe"></textarea>
+    <button onclick="addHomework()">Hausaufgabe hinzufügen</button>
+    
+    <!-- Admin-Anmeldeknopf -->
+    <button onclick="toggleLoginSection()">Admin-Anmeldung</button>
+
+    <!-- Liste der Hausaufgaben -->
+    <h2>Deine Hausaufgaben</h2>
+    <ul id="homework-list"></ul>
+
+    <!-- Admin-Anmeldung anzeigen -->
+    <div id="login-section" style="display: none;">
+      <h3>Admin-Anmeldung</h3>
+      <input type="text" id="admin-username" placeholder="Benutzername">
+      <input type="password" id="admin-password" placeholder="Passwort">
+      <button onclick="loginAdmin()">Anmelden</button>
+      <p id="login-error" style="color: red; display: none;"></p>
+    </div>
+  </div>
+
+  <!-- Admin App -->
+  <div class="container admin-app" id="admin-app">
+    <h1>Admin Dashboard</h1>
+
+    <textarea id="admin-message" placeholder="Nachricht für die Benutzer" rows="4"></textarea>
+    <input type="text" id="update-link" placeholder="Link zu weiteren Informationen">
+    <input type="number" id="lock-duration" placeholder="Sperrdauer in Minuten" min="1">
+    <button onclick="lockApp()">App sperren</button>
+    <button onclick="unlockApp()">App entsperren</button>
+
+    <button onclick="logoutAdmin()">Abmelden</button>
+
+    <h3>Statistiken</h3>
+    <p>Fehlgeschlagene Anmeldeversuche: <span id="failed-attempts" class="red-alert">0</span></p>
+    <p>App Aufrufe: <span id="app-visits">0</span></p>
+  </div>
+
+  <script>
+    let failedLoginAttempts = parseInt(localStorage.getItem("failedAttempts")) || 0;
+    let appVisits = parseInt(localStorage.getItem("appVisits")) || 0;
+    let newFailedAttempts = false;
+    
+    localStorage.setItem("appVisits", appVisits + 1);
+    
+    const ADMIN_USER = 'admin';
+    const ADMIN_PASS = 'password123';
+
+    // Funktion für Admin-Login
+    function loginAdmin() {
+      const username = document.getElementById('admin-username').value;
+      const password = document.getElementById('admin-password').value;
+
+      if (username === ADMIN_USER && password === ADMIN_PASS) {
+        document.getElementById('homework-app').style.display = 'none';
+        document.getElementById('admin-app').style.display = 'block';
+        document.getElementById('locked-screen').style.display = 'block'; // Admin sieht auch den Sperrbildschirm
+        document.getElementById('login-error').style.display = 'none';
+        newFailedAttempts = false; // Zurücksetzen der Markierung
+        document.getElementById('failed-attempts').classList.remove('red-alert');
+        updateFailedAttempts();
+      } else {
+        failedLoginAttempts++;
+        localStorage.setItem("failedAttempts", failedLoginAttempts);
+        newFailedAttempts = true;
+        document.getElementById('login-error').textContent = "Falscher Benutzername oder Passwort.";
+        document.getElementById('login-error').style.display = 'block';
+        updateFailedAttempts();
+      }
+    }
+
+    function updateFailedAttempts() {
+      document.getElementById('failed-attempts').textContent = localStorage.getItem("failedAttempts");
+      document.getElementById('app-visits').textContent = appVisits;
+
+      if (newFailedAttempts) {
+        document.getElementById('failed-attempts').classList.add('red-alert');
+      }
+    }
+
+    function lockApp() {
+      const message = document.getElementById("admin-message").value || "Die App ist momentan gesperrt.";
+      const updateLink = document.getElementById("update-link").value || "#";
+      const duration = document.getElementById("lock-duration").value;
+
+      localStorage.setItem("isLocked", 'true');
+      localStorage.setItem("customMessage", message);
+      localStorage.setItem("updateLink", updateLink);
+
+      if (duration) {
+        let countdownTime = parseInt(duration) * 60;
+        setInterval(function() {
+          if (countdownTime <= 0) {
+            unlockApp();
+            clearInterval(this);
+          }
+          const minutes = Math.floor(countdownTime / 60);
+          const seconds = countdownTime % 60;
+          document.getElementById("countdown").textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+          countdownTime--;
+        }, 1000);
+      }
+
+      updateLockedScreen();
+      enableHomeworkInputs(false); // Deaktiviert die Eingabefelder
+    }
+
+    function unlockApp() {
+      localStorage.setItem("isLocked", 'false');
+      document.getElementById("locked-screen").style.display = 'none';
+      document.getElementById("homework-app").style.display = 'block';
+      document.getElementById("admin-app").style.display = 'none';
+      enableHomeworkInputs(true);
+    }
+
+    function updateLockedScreen() {
+      const lockMessage = localStorage.getItem("customMessage");
+      const updateLink = localStorage.getItem("updateLink");
+
+      document.getElementById("lock-message").textContent = lockMessage;
+      document.getElementById("lock-link").setAttribute("href", updateLink);
+      document.getElementById("locked-screen").style.display = 'block';
+    }
+
+    function toggleLoginSection() {
+      const loginSection = document.getElementById("login-section");
+      loginSection.style.display = loginSection.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function enableHomeworkInputs(enable) {
+      document.getElementById("hausaufgabe").disabled = !enable;
+      document.getElementById("due-date").disabled = !enable;
+      document.getElementById("details").disabled = !enable;
+      document.querySelector("button[onclick='addHomework()']").disabled = !enable;
+    }
+
+    function logoutAdmin() {
+      document.getElementById("admin-app").style.display = 'none';
+      document.getElementById("homework-app").style.display = 'block';
+      enableHomeworkInputs(true); // Hausaufgabenfelder aktivieren
+    }
+
+    // Überprüfen, ob die App gesperrt ist, beim Laden der Seite
+    window.onload = function() {
+      const isLocked = localStorage.getItem("isLocked") === 'true';
+      if (isLocked) {
+        updateLockedScreen();
+      } else {
+        document.getElementById('homework-app').style.display = 'block';
+      }
+      updateFailedAttempts();
+    };
+  </script>
+
+</body>
+</html>
